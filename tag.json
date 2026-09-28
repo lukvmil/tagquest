@@ -1,0 +1,10 @@
+{
+    "id": "iHp8xTuYzQEeRrNoCUGiS",
+    "activatedAt": "...",
+    "activated": false,
+    "useCamera": true,
+    "useText": true,
+    "useGeo": true,
+    "public": false,
+    "prompt": ""
+}
