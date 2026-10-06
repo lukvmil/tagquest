@@ -37,6 +37,15 @@ def get_session():
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
+
+@app.get("/auth")
+def get_auth():
+    return FileResponse("static/auth.html")
+
+@app.get("/print")
+def get_print():
+    return FileResponse("static/print.html")
+
 @app.get("/K/{tag_key}")
 def resolve_key(tag_key: str, session: SessionDep):
     tag = session.scalars(
