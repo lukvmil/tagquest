@@ -6,7 +6,22 @@
     <title>tagquest</title>
   </head>
   <body>
-    yo yo!
+    <p>yo yo!</p>
+    <button onclick="printSomething();">print something :o</button>
   </body>
+  <script>
+    function printSomething() {
+        fetch("receipt.recurse.com/text", {
+            method: "POST", 
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                text: "hello world!!!!"
+            })
+        })
+    }
+  </script>
 </html>
 
