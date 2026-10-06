@@ -6,7 +6,9 @@
     <title>tagquest</title>
   </head>
   <body>
-    
+    {% for tag in tags %}
+        <p><a href="{{ url_for('get_tag', tag_id=tag.id) }}">{{ tag.id }}</a> {{ tag.quest }}</p>
+    {% endfor %}
   </body>
 </html>
 
