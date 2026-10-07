@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>tagquest</title>
+  </head>
+  <body>
+    <h1>Welcome to TagQuest!</h1>
+    <a href="https://receipt.recurse.com/login?redirect_uri=https%3A%2F%2Ftagquest.recurse.com%2Fprint">print your own tag!</a>
+    <hr>
+    <h2>Public Quests:</h2>
+    <ul>
+      {% for tag in tags %}
+        {% if tag.active %}
+          <li><a href="{{ url_for('get_tag', tag_id=tag.id) }}">#{{ tag.id }}</a>: {{ tag.quest }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </body>
+</html>
+

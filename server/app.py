@@ -3,7 +3,7 @@ from typing import Annotated
 
 import segno
 import uvicorn
-from fastapi import APIRouter, Cookie, Depends, FastAPI, Form, HTTPException, Request
+from fastapi import APIRouter, Cookie, Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, select
@@ -27,7 +27,7 @@ engine = create_engine(
 # Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 
-HOST = "127.0.0.1:8000"
+HOST = "tagquest.recurse.com"
 
 
 def get_session():
@@ -36,6 +36,13 @@ def get_session():
         
 SessionDep = Annotated[Session, Depends(get_session)]
 
+
+@app.get("/")
+def get_home(request: Request, session: SessionDep):
+    tags = session.scalars(select(Tag)).all()
+    return templates.TemplateResponse(
+        request=request, name="home.html", context={"tags": tags}
+    )
 
 
 @app.get("/auth")
@@ -68,15 +75,25 @@ def resolve_key(tag_key: str, session: SessionDep):
     )
     return resp
 
+
 @app.get("/new-tag")
 def new_tag(session: SessionDep):
     tag = Tag()
     session.add(tag)
     session.commit()
     
+    return {
+        "id": tag.id,
+        "key": tag.key,
+        "url": f"http://{HOST}/K/{tag.key}".upper()
+    }
+    
+@app.get("/k/{tag_key}/qrcode")
+def get_tag_qr_code(tag_key: str):
     buf = io.BytesIO()
+    url = f"https://{HOST.upper()}/K/{tag_key}".upper()
     segno.make_qr(
-        content=f"HTTP://{HOST}/K/{tag.key}",
+        content=url,
         mode="alphanumeric",
         error="M"
     ).save(
@@ -85,16 +102,10 @@ def new_tag(session: SessionDep):
         scale=10
     )
     
-    # return Response(
-    #     content=buf.getvalue(),
-    #     media_type="image/png"
-    # )
-    
-    return {
-        "id": tag.id,
-        "key": tag.key,
-        "url": f"http://{HOST}/K/{tag.key}".upper()
-    }
+    return Response(
+        content=buf.getvalue(),
+        media_type="image/png"
+    )
 
 @app.get("/t/{tag_id}/activate")
 def get_tag_activate():

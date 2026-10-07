@@ -6,22 +6,80 @@
     <title>tagquest</title>
   </head>
   <body>
-    <p>yo yo!</p>
-    <button onclick="printSomething();">print something :o</button>
+    <a href="/"><- back home</a>
+    <h1>TagQuest Quest Tag Printer™</h1>
+    <p>Tags will print from the receipt printer on the fourth floor, next to the big pillar near the kitchen</p>
+    <p>(Please don't print if you can't pick up your tag in a timely manner:))</p>
+    <p>After you print your tag, scan it with your phone to activate it</p>
+    <button onclick="printTag()">print my tag!!</button>
   </body>
   <script>
-    function printSomething() {
-        fetch("receipt.recurse.com/text", {
-            method: "POST", 
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                text: "hello world!!!!"
-            })
-        })
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
     }
+
+    const printerUrl = "https://receipt.recurse.com"; 
+
+    function printSomething() {
+      fetch(`${printerUrl}/text`, {
+        method: "POST", 
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": getCookie("receipt_csrf")
+        },
+        body: JSON.stringify({
+            text: "hello world!!!!"
+        })
+      })
+    }
+
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    async function printerPost(path, contentType, body) {
+      const res = await fetch(`${printerUrl}${path}`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": contentType,
+          "X-CSRF-Token": getCookie("receipt_csrf"),
+        },
+        body,
+      });
+      if (!res.ok) {
+        throw new Error(`${path} failed: HTTP ${res.status} ${await res.text()}`);
+      }
+      return res;
+    }
+    async function printTag() {
+      const tag_resp = await fetch("/new-tag");
+      const tag_dat = await tag_resp.json();
+
+      const qr_src = await fetch(`/k/${tag_dat.key}/qrcode`);
+
+      const blob = await qr_src.blob();
+      await printerPost(
+        "/text",
+        "application/json",
+        JSON.stringify({ 
+          text: `TagQuest Quest Tag`, 
+          scaleHeight: 2,
+          scaleWidth: 2,
+          coda: "newline" 
+        })
+      );
+        await delay(200);
+      await printerPost("/image?cut=0", blob.type || "application/octet-stream", blob);
+      await delay(200);
+      await printerPost(
+        "/text",
+        "application/json",
+        JSON.stringify({ text: `tag #${tag_dat.id}`, coda: "cut" })
+      );
+    }
+
   </script>
 </html>
 

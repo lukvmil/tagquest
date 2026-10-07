@@ -6,13 +6,16 @@
     <title>tagquest</title>
   </head>
   <body>
+    <a href="/"><- back home</a>
     <p>Tag Quest:<p>
     <p>{{ tag.quest }}</p>
-
+    <hr/>
     <p>Entries:</p>
-    {% for entry in entries %}
-    <p>{{ entry.text }}</p>
-    {% endfor %}
+    <ul>
+      {% for entry in entries %}
+      <li>[{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}]: {{ entry.text }}</li>
+      {% endfor %}
+    </ul>
 
     {% if valid_key == True %}
     <form action="{{ url_for('post_entry', tag_id=tag.id) }}" method="post">
