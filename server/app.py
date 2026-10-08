@@ -1,4 +1,5 @@
 import io
+import os
 from typing import Annotated
 
 import segno
@@ -8,13 +9,31 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+from starlette.middleware.sessions import SessionMiddleware
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from dotenv import load_dotenv
 
 from server.orm import Base, Entry, Tag
 
+load_dotenv()
+SESSION_SECRET = os.getenv("SESSION_SECRET")
+RC_AUTH_ID = os.getenv("RC_AUTH_ID")
+RC_AUTH_SECRET = os.getenv("RC_AUTH_SECRET")
 
 app = FastAPI()
 api = APIRouter(prefix="/api")
 app.include_router(api)
+app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
+
+oauth = OAuth()
+oauth.register(
+    name="recurse",
+    client_id=os.getenv("RC_CLIENT_ID"),
+    client_secret=os.getenv("RC_CLIENT_SECRET"),
+    authorize_url="https://www.recurse.com/oauth/authorize",
+    access_token_url="https://www.recurse.com/oauth/token",
+    api_base_url="https://www.recurse.com/api/v1/"
+)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -27,8 +46,8 @@ engine = create_engine(
 # Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 
-HOST = "tagquest.recurse.com"
-
+# HOST = "tagquest.recurse.com"
+HOST = "127.0.0.1:8000"
 
 def get_session():
     with Session(engine) as session:
@@ -44,6 +63,16 @@ def get_home(request: Request, session: SessionDep):
         request=request, name="home.html", context={"tags": tags}
     )
 
+@app.get("/login")
+async def login(request: Request):
+    redirect_uri = "https://tagquest.recurse.com/auth/callback"
+    return await oauth.recurse.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    token = await oauth.recurse.authorize_access_token(request)
+    user = token["userinfo"]
+    return dict(user)
 
 @app.get("/auth")
 def get_auth():
