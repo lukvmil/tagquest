@@ -6,7 +6,7 @@
     <title>tagquest</title>
   </head>
   <body>
-    <a href="/"><- back home</a>
+    <a href="/">&#8592; back home</a>
     <h1>TagQuest Quest Tag Printer™</h1>
     <p>Tags will print from the receipt printer on the fourth floor, next to the big pillar near the kitchen</p>
     <p>(Please don't print if you can't pick up your tag in a timely manner:))</p>
@@ -21,20 +21,6 @@
     }
 
     const printerUrl = "https://receipt.recurse.com"; 
-
-    function printSomething() {
-      fetch(`${printerUrl}/text`, {
-        method: "POST", 
-        credentials: "include",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": getCookie("receipt_csrf")
-        },
-        body: JSON.stringify({
-            text: "hello world!!!!"
-        })
-      })
-    }
 
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -59,24 +45,37 @@
 
       const qr_src = await fetch(`/k/${tag_dat.key}/qrcode`);
 
+      const user_resp = await fetch(`/me`);
+      const user_data = await user_resp.json();
+
       const blob = await qr_src.blob();
       await printerPost(
         "/text",
         "application/json",
         JSON.stringify({ 
-          text: `TagQuest Quest Tag`, 
+          text: `TagQuest v0.2`, 
           scaleHeight: 2,
           scaleWidth: 2,
           coda: "newline" 
         })
       );
-        await delay(200);
+      await delay(200);
+      await printerPost(
+        "/text",
+        "application/json",
+        JSON.stringify({ 
+          text: `\nTag #${tag_dat.id} printed by ${user_data.name}`, 
+          coda: "newline" 
+        })
+      );
       await printerPost("/image?cut=0", blob.type || "application/octet-stream", blob);
       await delay(200);
       await printerPost(
         "/text",
         "application/json",
-        JSON.stringify({ text: `tag #${tag_dat.id}`, coda: "cut" })
+        JSON.stringify({ 
+          text: `Tag quest:\n\n____________________________________\n\n____________________________________`, 
+          coda: "cut" })
       );
     }
 

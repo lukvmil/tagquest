@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>tagquest</title>
+  </head>
+  <body>
+    <p>Successfully logged in as {{ user.name }}!</p>
+    <p>(If you just scanned a tag, you will need to scan it again)</p>
+    <p>Redirecting in 3 seconds...</p>
+  </body>
+  <script>
+    setTimeout(() => {
+    window.location.href = "/";
+    }, 3000);
+  </script>
+</html>
+

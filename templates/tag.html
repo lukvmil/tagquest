@@ -6,19 +6,20 @@
     <title>tagquest</title>
   </head>
   <body>
-    <a href="/"><- back home</a>
+    <a href="/">&#8592; back home</a>
     <p>Tag Quest:<p>
     <p>{{ tag.quest }}</p>
+    <p><i>Activated by </i><b>{{ tag.user.name }}</b></p>
     <hr/>
     <p>Entries:</p>
     <ul>
       {% for entry in entries %}
-      <li>[{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}]: {{ entry.text }}</li>
+      <li>[{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}] <b>{{ entry.user.name }}</b>: {{ entry.text }}</li>
       {% endfor %}
     </ul>
 
     {% if valid_key == True %}
-    <form action="{{ url_for('post_entry', tag_id=tag.id) }}" method="post">
+    <form action="/t/{{ tag.id }}/entry" method="post">
       <label for="text">Add an entry to this quest:</label><br>
       <textarea id="text" name="text" rows="6" cols="40"></textarea><br>
       <button type="submit">Submit</button>

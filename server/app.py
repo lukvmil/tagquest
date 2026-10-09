@@ -13,12 +13,12 @@ from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth, OAuthError
 from dotenv import load_dotenv
 
-from server.orm import Base, Entry, Tag
+from server.orm import Base, Entry, Tag, User
 
 load_dotenv()
 SESSION_SECRET = os.getenv("SESSION_SECRET")
-RC_AUTH_ID = os.getenv("RC_AUTH_ID")
-RC_AUTH_SECRET = os.getenv("RC_AUTH_SECRET")
+RC_CLIENT_ID = os.getenv("RC_CLIENT_ID")
+RC_CLIENT_SECRET = os.getenv("RC_CLIENT_SECRET")
 
 app = FastAPI()
 api = APIRouter(prefix="/api")
@@ -28,8 +28,8 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 oauth = OAuth()
 oauth.register(
     name="recurse",
-    client_id=os.getenv("RC_CLIENT_ID"),
-    client_secret=os.getenv("RC_CLIENT_SECRET"),
+    client_id=RC_CLIENT_ID,
+    client_secret=RC_CLIENT_SECRET,
     authorize_url="https://www.recurse.com/oauth/authorize",
     access_token_url="https://www.recurse.com/oauth/token",
     api_base_url="https://www.recurse.com/api/v1/"
@@ -46,50 +46,101 @@ engine = create_engine(
 # Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 
-# HOST = "tagquest.recurse.com"
-HOST = "127.0.0.1:8000"
+HOST = "tagquest.recurse.com"
+# HOST = "127.0.0.1:8000"
 
 def get_session():
     with Session(engine) as session:
         yield session
-        
-SessionDep = Annotated[Session, Depends(get_session)]
 
+DatabaseSession = Annotated[Session, Depends(get_session)]
+
+
+def current_user(request: Request, db: DatabaseSession):
+    user_id = request.session.get("user_id")
+    user = db.get(User, user_id) if user_id else None
+    if user is None:
+        raise HTTPException(401, "Not authenticated")
+
+    return user
+
+CurrentUser = Annotated[User, Depends(current_user)]
 
 @app.get("/")
-def get_home(request: Request, session: SessionDep):
-    tags = session.scalars(select(Tag)).all()
+def get_home(request: Request, db: DatabaseSession):
+    tags = db.scalars(select(Tag)).all()
+    
     return templates.TemplateResponse(
         request=request, name="home.html", context={"tags": tags}
     )
+    
+@app.get("/me")
+def get_me(user: CurrentUser):
+    return {"name": user.name}
 
 @app.get("/login")
 async def login(request: Request):
     redirect_uri = "https://tagquest.recurse.com/auth/callback"
     return await oauth.recurse.authorize_redirect(request, redirect_uri)
 
+@app.get("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse("/", status_code=302)
+
 @app.get("/auth/callback")
-async def auth_callback(request: Request):
+async def auth_callback(request: Request, db: DatabaseSession):
     token = await oauth.recurse.authorize_access_token(request)
-    user = token["userinfo"]
-    return dict(user)
+    print(token)
+    
+    resp = await oauth.recurse.get("profiles/me", token=token)
+    resp.raise_for_status()
+    user_data = resp.json()
+    user_id = user_data["id"]
+    user_name = user_data["name"]
+    
+    user = db.scalar(select(User).where(User.id == user_id))
+    new = False
+    if user is None:
+        user = User(id=user_id)
+        db.add(user)
+        new = True
+    
+    user.name = user_name
+    db.commit()
+
+    request.session["user_id"] = user_id
+    
+    return templates.TemplateResponse(
+        request=request, name="login_success.html", context={"user": user}
+    )
 
 @app.get("/auth")
 def get_auth():
     return FileResponse("static/auth.html")
 
 @app.get("/print")
-def get_print():
+def get_print(request: Request, db: DatabaseSession):
+    user_id = request.session.get("user_id")
+    user = db.get(User, user_id) if user_id else None
+    if user is None:
+        return RedirectResponse("/login", status_code=302)
+    
     return FileResponse("static/print.html")
 
 @app.get("/K/{tag_key}")
-def resolve_key(tag_key: str, session: SessionDep):
-    tag = session.scalars(
+def resolve_key(tag_key: str, db: DatabaseSession, request: Request):
+    tag = db.scalars(
         select(Tag).where(Tag.key == tag_key)
     ).first()
     
     if not tag:
         return HTTPException(status_code=404, detail="Invalid tag key")
+    
+    user_id = request.session.get("user_id")
+    user = db.get(User, user_id) if user_id else None
+    if user is None:
+        return RedirectResponse("/login", status_code=302)
     
     if tag.active:
         resp = RedirectResponse(f"/t/{tag.id}", status_code=302)
@@ -106,10 +157,10 @@ def resolve_key(tag_key: str, session: SessionDep):
 
 
 @app.get("/new-tag")
-def new_tag(session: SessionDep):
+def new_tag(db: DatabaseSession):
     tag = Tag()
-    session.add(tag)
-    session.commit()
+    db.add(tag)
+    db.commit()
     
     return {
         "id": tag.id,
@@ -142,15 +193,18 @@ def get_tag_activate():
 
 @app.post("/t/{tag_id}/activate")
 def post_tag_activate(
-    session: SessionDep,
+    db: DatabaseSession,
     tag_id: str, 
     prompt: Annotated[str, Form()],
+    user: CurrentUser,
     tag_key: Annotated[str | None, Cookie()] = None,
 ):
     print("got key:", tag_key)
-    tag: Tag = session.get(Tag, tag_id)
-    tag.activate(quest=prompt)
-    session.commit()
+    tag: Tag = db.get(Tag, tag_id)
+    tag.activate(
+        quest=prompt,
+        user=user)
+    db.commit()
     
     return RedirectResponse(f"/t/{tag_id}", status_code=303)
 
@@ -159,14 +213,14 @@ def post_tag_activate(
 def get_tag(
     request: Request, 
     tag_id: str, 
-    session: SessionDep,
+    db: DatabaseSession,
     tag_key: Annotated[str | None, Cookie()] = None
 ):
-    tag: Tag = session.get(Tag, tag_id)
+    tag: Tag = db.get(Tag, tag_id)
     valid_key: bool = (tag_key == tag.key)
     print(f"got tag key: {tag_key}, valid: {valid_key}, expected: {tag.key}")
     
-    entries = session.scalars(
+    entries = db.scalars(
         select(Entry).where(Entry.tag == tag)
     ).all()
     
@@ -181,23 +235,25 @@ def get_tag(
 @app.post("/t/{tag_id}/entry")
 def post_entry(
     tag_id: str,
-    session: SessionDep,
-    text: Annotated[str, Form()]
+    db: DatabaseSession,
+    text: Annotated[str, Form()],
+    user: CurrentUser
 ):
-    tag: Tag = session.get(Tag, tag_id)
+    tag: Tag = db.get(Tag, tag_id)
     entry = Entry(
         tag=tag,
-        text=text
+        text=text,
+        user=user
     )
-    session.add(entry)
-    session.commit()
+    db.add(entry)
+    db.commit()
     
     return RedirectResponse(f"/t/{tag_id}", status_code=303)
 
 
 @app.get("/tags", response_class=HTMLResponse)
-def get_tags(request: Request, session: SessionDep):
-    tags = session.scalars(select(Tag)).all()
+def get_tags(request: Request, db: DatabaseSession):
+    tags = db.scalars(select(Tag)).all()
     return templates.TemplateResponse(
         request=request, name="tags.html", context={"tags": tags}
     )

@@ -8,7 +8,7 @@
   <body>
     <ul>
       {% for tag in tags %}
-      <li><a href="{{ url_for('get_tag', tag_id=tag.id) }}">{{ tag.id }}</a>: {{ tag.quest }}</li>
+      <li><a href="/t/{{ tag.id }}">{{ tag.id }}</a>: {{ tag.quest }}</li>
       {% endfor %}
     </ul>
   </body>
