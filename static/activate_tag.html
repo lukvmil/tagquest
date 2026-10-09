@@ -12,7 +12,13 @@
     </p>
     <form method="post">
       <label for="prompt">Set a quest for this tag:</label><br>
-      <textarea id="prompt" name="prompt" rows="6" cols="40"></textarea><br>
+      <textarea id="prompt" name="prompt" rows="6" cols="40"></textarea><br><br>
+
+      <label>Tag visibility:</label><br>
+      <input type="radio" id="public" name="visibility" value="public" checked>
+      <label for="public">Public</label><br>
+      <input type="radio" id="private" name="visibility" value="private">
+      <label for="private">Private</label><br><br>
       <button type="submit">Submit</button>
     </form>
   </body>

@@ -29,8 +29,9 @@ class Tag(Base):
         self.id = utils.make_id()
         self.key = utils.make_key()
     
-    def activate(self, quest: str, user: "User"):
+    def activate(self, quest: str, user: "User", public: bool):
         self.active = True
+        self.public = public
         self.user = user
         self.activated_at = datetime.now(timezone.utc)
         self.quest = quest

@@ -7,16 +7,43 @@
   </head>
   <body>
     <h1>Welcome to TagQuest v0.2!</h1>
-    <a href="https://receipt.recurse.com/login?redirect_uri=https%3A%2F%2Ftagquest.recurse.com%2Fprint">print your own tag!</a>
+    {% if current_user %}
+    <p>You are logged in as <b>{{ current_user.name }}</b>.</p>
+    <button onclick="window.location.href = '{{ RECEIPT_AUTH_URI }}'">Print a new tag</button>
+    <button onclick="window.location.href = '/logout'">Log out</button>
+    {% else %}
+    <p>You are not logged in.</p>
+    <button onclick="window.location.href = '/login'">Log in</button>
+    {% endif %}
+    
     <hr>
-    <h2>Public Quests:</h2>
+    
+    <h2>Your Quests:</h2>
+    {% if your_tags %}
     <ul>
-      {% for tag in tags %}
+      {% for tag in your_tags %}
+        {% if tag.active %}
+          <li>{{ "*" if tag.user == current_user else "" }}<a href="/t/{{ tag.id }}">#{{ tag.id }}</a> ({{ tag.entries|length }} entries): {{ tag.quest }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+    <p>* = quest activated by you</p>
+    {% else %}
+    <p>You haven't activated or interacted with any tags yet</p>
+    {% endif %}
+
+    <h2>Public Quests:</h2>
+    {% if public_tags %}
+    <ul>
+      {% for tag in public_tags %}
         {% if tag.active %}
           <li><a href="/t/{{ tag.id }}">#{{ tag.id }}</a> ({{ tag.entries|length }} entries): {{ tag.quest }}</li>
         {% endif %}
       {% endfor %}
     </ul>
+    {% else %}
+    <p>There aren't any public tags yet</p>
+    {% endif %}
   </body>
 </html>
 

@@ -1,13 +1,14 @@
 import io
 import os
 from typing import Annotated
+from urllib.parse import quote
 
 import segno
 import uvicorn
 from fastapi import APIRouter, Cookie, Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, or_, select
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -46,7 +47,10 @@ engine = create_engine(
 # Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 
-HOST = "tagquest.recurse.com"
+HOST = "tagquest-dev.recurse.com"
+RECEIPT_REDIRECT_URI = f"https://{HOST}/print"
+RECEIPT_AUTH_URI = f"https://receipt.recurse.com/login?redirect_uri={quote(RECEIPT_REDIRECT_URI, safe='')}"
+
 # HOST = "127.0.0.1:8000"
 
 def get_session():
@@ -59,19 +63,29 @@ DatabaseSession = Annotated[Session, Depends(get_session)]
 def current_user(request: Request, db: DatabaseSession):
     user_id = request.session.get("user_id")
     user = db.get(User, user_id) if user_id else None
-    if user is None:
-        raise HTTPException(401, "Not authenticated")
-
     return user
 
 CurrentUser = Annotated[User, Depends(current_user)]
 
 @app.get("/")
-def get_home(request: Request, db: DatabaseSession):
-    tags = db.scalars(select(Tag)).all()
+def get_home(request: Request, db: DatabaseSession, c_user: CurrentUser):
+    your_tags = db.scalars(
+        select(Tag).where(or_(
+            Tag.user == c_user,
+            Tag.entries.any(Entry.user == c_user),
+        ))
+    ).all()
+    public_tags = db.scalars(
+        select(Tag).where(Tag.public==True)
+    ).all()
     
     return templates.TemplateResponse(
-        request=request, name="home.html", context={"tags": tags}
+        request=request, name="home.html", context={
+            "current_user": c_user,
+            "public_tags": public_tags,
+            "your_tags": your_tags,
+            "RECEIPT_AUTH_URI": RECEIPT_AUTH_URI
+        }
     )
     
 @app.get("/me")
@@ -80,7 +94,7 @@ def get_me(user: CurrentUser):
 
 @app.get("/login")
 async def login(request: Request):
-    redirect_uri = "https://tagquest.recurse.com/auth/callback"
+    redirect_uri = f"https://{HOST}/auth/callback"
     return await oauth.recurse.authorize_redirect(request, redirect_uri)
 
 @app.get("/logout")
@@ -196,6 +210,7 @@ def post_tag_activate(
     db: DatabaseSession,
     tag_id: str, 
     prompt: Annotated[str, Form()],
+    visibility: Annotated[str, Form()],
     user: CurrentUser,
     tag_key: Annotated[str | None, Cookie()] = None,
 ):
@@ -203,7 +218,9 @@ def post_tag_activate(
     tag: Tag = db.get(Tag, tag_id)
     tag.activate(
         quest=prompt,
-        user=user)
+        user=user,
+        public=(visibility=="public")
+    )
     db.commit()
     
     return RedirectResponse(f"/t/{tag_id}", status_code=303)
