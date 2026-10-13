@@ -9,16 +9,18 @@
     <a href="/">&#8592; back home</a>
     <h1>TagQuest Leaderboard</h1>
     <ol>
-        {% for entry in leaderboard_data %}
-        <li><b>{{ entry.name }}</b>: {{ entry.score }} points</li>
-        {% endfor %}
+    {% for entry in leaderboard_data %}
+      {% if entry.score > 0 %}
+      <li><b>{{ entry.name }}</b>: {{ entry.score }} points</li>
+      {% endif %}
+    {% endfor %}
     </ol>
     <hr/>
     <p>Users receive points for the following activities:</p>
     <ul>
         <li>3 pts - for each tag you activate</li>
         <li>2 pts - for each entry you add to tag</li>
-        <li>1 pt - for each entry (excluding your own) added to one of your activated tags</li>
+        <li>1 pt - for each entry other users add to one of your activated tags</li>
     </ul>
   </body>
 </html>
