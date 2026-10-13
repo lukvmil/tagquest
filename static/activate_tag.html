@@ -7,22 +7,42 @@
   </head>
   <body>
     <a href="/">&#8592; back home</a>
+    <h1>Activate Tag</h1>
     <p>
-      congrats!! you are the first person to interact with this tag, so you get to set its quest. this is the prompt or instructions that future people will create entries for
+      You are the first user to scan this tag, so you get to activate it!
     </p>
+    <p>
+      If you are stuck, here are some example quests you can use or modify:
+    </p>
+    <ul>
+      <li><a href="#" onclick="setQuest(0);">Collaborative storytelling</a></li>
+      <li><a href="#" onclick="setQuest(1);">Hide and seek</a></li>
+    </ul>
     <form method="post">
-      <label for="prompt"><b>Tag quest:</b></label><br>
-      <small><i>A tag's quest is the mission/goal/instructions that users will see when adding an entry</i></small>
-      <textarea id="prompt" name="prompt" rows="6" cols="40"></textarea><br><br>
+      <label for="quest"><b>Tag quest:</b></label><br>
+      <small><i>A tag's quest is the mission/goal/instructions that other users will see when adding new entries</i></small><br>
+      <textarea id="quest" name="quest" rows="6" cols="40"></textarea><br><br>
 
       <label><b>Tag visibility:</b></label><br>
-      <small><i>Public tags can be viewed by anyone, private tags are only visible to users that scan them</i></small><br>
+      <small><i>Public tags can be viewed by anyone from the home page, private tags are only visible to users that scan them</i></small><br>
       <input type="radio" id="public" name="visibility" value="public" checked>
       <label for="public">Public</label><br>
       <input type="radio" id="private" name="visibility" value="private">
       <label for="private">Private</label><br><br>
-      <button type="submit">Activate Tag!</button>
+      <button type="submit">Activate tag!</button>
     </form>
   </body>
+  <script>
+    const questText = document.getElementById("quest");
+
+    const exampleQuests = [
+      "Write a sentence or two of a story, then hand this tag to someone else to continue it",
+      "Hide this tag somewhere in the hub, then add entry giving a hint about its location. If you find this tag, hide it again in a new location! (Or attach this tag to an object and hide that :))"
+    ]
+
+    function setQuest(index) {
+      questText.innerText = exampleQuests[index];
+    }
+  </script>
 </html>
 

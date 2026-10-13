@@ -6,7 +6,13 @@
     <title>tagquest</title>
   </head>
   <body>
-    <a href="https://receipt.recurse.com/login?redirect_uri=https%3A%2F%2Ftagquest.recurse.com%2Fprint">log in!</a>
+    <p>Authorization failed :(</p>
+    <p>Redirecting you to home page in 3 seconds...</p>
   </body>
+  <script>
+    setTimeout(() => {
+    window.location.href = "/";
+    }, 3000);
+  </script>
 </html>
 

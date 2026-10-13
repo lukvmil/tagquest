@@ -7,23 +7,29 @@
   </head>
   <body>
     <a href="/">&#8592; back home</a>
-    <p>Tag Quest:<p>
+    <h2>Tag Quest:</h2>
     <p>{{ tag.quest }}</p>
-    <p><i>Activated by </i><b>{{ tag.user.name }}</b></p>
+    <small>Activated by <b>{{ tag.user.name }}</b></small><br>
     <hr/>
-    <p>Entries:</p>
+    <h2>Entries:</h2>
+    {% if entries %}
     <ul>
       {% for entry in entries %}
       <li>[{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}] <b>{{ entry.user.name }}</b>: {{ entry.text }}</li>
       {% endfor %}
     </ul>
+    {% else %}
+    <p>This tag doesn't have any entries yet</p>
+    {% endif %}
 
     {% if valid_key == True %}
     <form action="/t/{{ tag.id }}/entry" method="post">
-      <label for="text">Add an entry to this quest:</label><br>
+      <label for="text">Add an entry to this tag:</label><br>
       <textarea id="text" name="text" rows="6" cols="40"></textarea><br>
       <button type="submit">Submit</button>
     </form>
+    {% else %}
+    <p><i>Scan this tag's QR code to add an entry</i></p>
     {% endif %}
   </body>
 </html>
