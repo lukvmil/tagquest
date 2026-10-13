@@ -47,7 +47,7 @@ engine = create_engine(
 # Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 
-HOST = "tagquest-dev.recurse.com"
+HOST = "tagquest.recurse.com"
 RECEIPT_REDIRECT_URI = f"https://{HOST}/print"
 RECEIPT_AUTH_URI = f"https://receipt.recurse.com/login?redirect_uri={quote(RECEIPT_REDIRECT_URI, safe='')}"
 
@@ -273,13 +273,4 @@ def get_tags(request: Request, db: DatabaseSession):
     tags = db.scalars(select(Tag)).all()
     return templates.TemplateResponse(
         request=request, name="tags.html", context={"tags": tags}
-    )
-
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "server.app:app",
-        reload=True,
-        host="0.0.0.0",
-        port=80
     )
