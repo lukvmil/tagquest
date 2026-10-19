@@ -23,9 +23,20 @@
     {% endif %}
 
     {% if valid_key == True %}
-    <form action="/t/{{ tag.id }}/entry" method="post">
+    <form action="/t/{{ tag.id }}/entry" method="post" enctype="multipart/form-data">
+      {% if tag.txt_mode %}
       <label for="text">Add an entry to this tag:</label><br>
-      <textarea id="text" name="text" rows="6" cols="40"></textarea><br>
+      <textarea id="text" name="text" rows="6" cols="40"></textarea><br><br>
+      {% endif %}
+      {% if tag.geo_mode %}
+      <button type="button">Get current location</button>
+      <input type="text" disabled><br><br>
+      {% endif %}
+      {% if tag.img_mode %}
+      <label for="image-input">Take photo</label><br>
+      <input type="file" id="image-input" name="image" accept="image/*" capture="environment">
+      <img id="preview" alt="" style="max-width: 100%; display: none;"><br><br>
+      {% endif %}
       <button type="submit">Submit</button>
     </form>
     {% else %}

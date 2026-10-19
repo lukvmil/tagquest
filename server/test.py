@@ -1,5 +1,6 @@
 import io
 
+from fastapi.responses import FileResponse
 import segno
 from fastapi import APIRouter, Response
 
@@ -45,3 +46,7 @@ def get_tag_qr_code(tag_key: str):
 @test_router.get("/me")
 def get_me(user: GetUser):
     return {"name": user.name}
+
+@test_router.get("/img_test")
+def get_img_test():
+    return FileResponse("static/image_test.html")

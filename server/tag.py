@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Form, HTTPException, Request
+from fastapi import APIRouter, Cookie, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
@@ -46,10 +46,13 @@ def get_tag_activate():
 @tag_router.post("/t/{tag_id}/activate")
 def post_tag_activate(
     db: DatabaseSession,
+    user: GetUser,
     tag_id: str, 
     quest: Annotated[str, Form()],
     visibility: Annotated[str, Form()],
-    user: GetUser,
+    txt_mode: Annotated[bool, Form()] = False,
+    img_mode: Annotated[bool, Form()] = False,
+    geo_mode: Annotated[bool, Form()] = False,
     tag_key: Annotated[str | None, Cookie()] = None,
 ):
     print("got key:", tag_key)
@@ -57,7 +60,10 @@ def post_tag_activate(
     tag.activate(
         quest=quest,
         user=user,
-        public=(visibility=="public")
+        public=(visibility=="public"),
+        txt_mode=txt_mode,
+        img_mode=img_mode,
+        geo_mode=geo_mode
     )
     db.commit()
     
@@ -88,11 +94,12 @@ def get_tag(
     )
 
 @tag_router.post("/t/{tag_id}/entry")
-def post_entry(
+async def post_entry(
     tag_id: str,
     db: DatabaseSession,
-    text: Annotated[str, Form()],
-    user: GetUser
+    user: GetUser,
+    text: Annotated[str, Form(...)],
+    image: UploadFile = File()
 ):
     tag: Tag = db.get(Tag, tag_id)
     entry = Entry(
@@ -100,6 +107,9 @@ def post_entry(
         text=text,
         user=user
     )
+    data = await image.read()
+    with open(image.filename, "wb") as f:
+        f.write(data)
     db.add(entry)
     db.commit()
     

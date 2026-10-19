@@ -19,6 +19,10 @@ class Tag(Base):
         DateTime(timezone=True))
     quest: Mapped[str | None]
     
+    txt_mode: Mapped[bool] = mapped_column(default=False)
+    geo_mode: Mapped[bool] = mapped_column(default=False)
+    img_mode: Mapped[bool] = mapped_column(default=False)
+    
     user_id: Mapped[int | None] = mapped_column(ForeignKey("user.id"), index=True)
     user: Mapped["User | None"] = relationship(back_populates="tags")
     
@@ -29,12 +33,23 @@ class Tag(Base):
         self.id = utils.make_id()
         self.key = utils.make_key()
     
-    def activate(self, quest: str, user: "User", public: bool):
+    def activate(
+        self, quest: str, 
+        user: "User", 
+        public: bool,
+        txt_mode: bool = False,
+        img_mode: bool = False,
+        geo_mode: bool = False
+    ):
         self.active = True
         self.public = public
         self.user = user
         self.activated_at = datetime.now(timezone.utc)
         self.quest = quest
+        
+        self.txt_mode = txt_mode
+        self.img_mode = img_mode
+        self.geo_mode = geo_mode
         
 class Entry(Base):
     __tablename__ = "entry"

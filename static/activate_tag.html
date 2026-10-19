@@ -23,10 +23,22 @@
       <small><i>A tag's quest is the mission/goal/instructions that other users will see when adding new entries</i></small><br>
       <textarea id="quest" name="quest" rows="6" cols="40"></textarea><br><br>
 
+      <label><b>Tag entry modes:</b></label><br>
+      <small><i>These are the inputs modes users will provide when adding an entry to this tag</i></small><br>
+      <input type="checkbox" id="text-mode", name="txt_mode">
+      <label for="text-mode">Text mode</label><br>
+      <input type="checkbox" id="geo-mode", name="geo_mode">
+      <label for="text-mode">Geolocation mode</label><br>
+      <input type="checkbox" id="image-mode", name="img_mode">
+      <label for="text-mode">Image mode</label><br><br>
+
+
       <label><b>Tag visibility:</b></label><br>
       <small><i>Public tags can be viewed by anyone from the home page, private tags are only visible to users that scan them</i></small><br>
       <input type="radio" id="public" name="visibility" value="public" checked>
       <label for="public">Public</label><br>
+      <input type="radio" id="unlisted" name="visibility" value="unlisted">
+      <label for="unlisted">Unlisted</label><br>
       <input type="radio" id="private" name="visibility" value="private">
       <label for="private">Private</label><br><br>
       <button type="submit">Activate tag!</button>
