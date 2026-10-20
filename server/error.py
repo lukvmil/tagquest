@@ -1,0 +1,11 @@
+from fastapi import Request
+from starlette.exceptions import HTTPException
+
+from .common import templates
+
+
+async def http_error_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse(
+            request=request, name="error.html", status_code=404, context={"exc": exc}
+        )

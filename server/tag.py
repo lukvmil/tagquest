@@ -124,14 +124,13 @@ def get_tag(
                 select(Entry).where(Entry.tag == tag, Entry.user == user)
             ).all()
         else:
-            entries = []
+            raise HTTPException(status_code=404, detail="Tag not found")
     
     else:
         # unlisted/public tags show all to everyone
         entries = db.scalars(
             select(Entry).where(Entry.tag == tag)
         ).all()
-            
 
     return templates.TemplateResponse(
         request=request, name="tag.html", context={
