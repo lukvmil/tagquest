@@ -15,7 +15,15 @@
     {% if entries %}
     <ul>
       {% for entry in entries %}
-      <li>[{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}] <b>{{ entry.user.name }}</b>: {{ entry.text or "" }}</li>
+      <li>
+        [{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}] <b>{{ entry.user.name }}</b>{% if tag.txt_mode and entry.text %}: {{ entry.text }}{% endif %}
+        {% if tag.geo_mode %}
+        {# TODO: show location once entries store it #}
+        {% endif %}
+        {% if tag.img_mode and entry.image_name %}
+        <br><img src="/uploads/{{ entry.image_name }}" alt="Photo from {{ entry.user.name }}" style="max-width: 100%;">
+        {% endif %}
+      </li>
       {% endfor %}
     </ul>
     {% else %}

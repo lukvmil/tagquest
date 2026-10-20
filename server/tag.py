@@ -1,14 +1,15 @@
-import mimetypes
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Cookie, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
 from .auth import RequireLogin
 from .db import DatabaseSession
+from .images import InvalidImage, process_image
 from .orm import Entry, Tag, TagStatus, TagVisibility
 from .common import templates, GetUser
 
@@ -17,6 +18,7 @@ tag_router = APIRouter()
 
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 @tag_router.get("/K/{tag_key}", dependencies=[RequireLogin])
@@ -135,24 +137,26 @@ async def post_entry(
     if not tag.txt_mode:
         text = None
 
-    image_path = None
+    image_name = None
     if tag.img_mode and image:
-        if not (image.content_type or "").startswith("image/"):
-            return fail("Upload must be an image")
         data = await image.read(MAX_IMAGE_BYTES + 1)
         if len(data) > MAX_IMAGE_BYTES:
-            return fail("Image is too large (max 10 MB)")
+            return fail(f"Image is too large (max {MAX_IMAGE_BYTES // (1024 * 1024)} MB)")
 
-        UPLOAD_DIR.mkdir(exist_ok=True)
-        ext = mimetypes.guess_extension(image.content_type) or ""
-        image_path = UPLOAD_DIR / f"{uuid4().hex}{ext}"
-        image_path.write_bytes(data)
+        # decoding/encoding is CPU-bound, keep it off the event loop
+        try:
+            data = await run_in_threadpool(process_image, data)
+        except InvalidImage:
+            return fail("Upload must be an image")
+
+        image_name = f"{uuid4().hex}.webp"
+        (UPLOAD_DIR / image_name).write_bytes(data)
 
     entry = Entry(
         tag=tag,
         user=user,
         text=text,
-        image_path=str(image_path) if image_path else None
+        image_name=image_name
     )
     db.add(entry)
     db.commit()

@@ -78,7 +78,7 @@ class Entry(Base):
     __tablename__ = "entry"
     id: Mapped[int] = mapped_column(primary_key=True)
     text: Mapped[str | None]
-    image_path: Mapped[str | None]
+    image_name: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True))
     
@@ -93,13 +93,13 @@ class Entry(Base):
         tag: Tag,
         user: "User",
         text: str | None = None,
-        image_path: str | None = None
+        image_name: str | None = None
     ):
         self.created_at = datetime.now(timezone.utc)
         self.tag = tag
         self.user = user
         self.text = text
-        self.image_path = image_path
+        self.image_name = image_name
 
 class User(Base):
     __tablename__ = "user"

@@ -39,9 +39,7 @@
     {% if public_tags %}
     <ul>
       {% for tag in public_tags %}
-        {% if tag.status == "active" %}
-          <li><a href="/t/{{ tag.id }}">{{ tag.quest | truncate(50, end='...')}}</a> ({{ tag.entries|length }} {{"entry" if tag.entries|length == 1 else "entries"}})</li>
-        {% endif %}
+        <li><a href="/t/{{ tag.id }}">{{ tag.quest | truncate(50, end='...')}}</a> ({{ tag.entries|length }} {{"entry" if tag.entries|length == 1 else "entries"}})</li>
       {% endfor %}
     </ul>
     {% else %}
