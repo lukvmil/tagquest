@@ -12,6 +12,13 @@
     <small>Activated by <b>{{ tag.user.name }}</b></small><br>
     <hr/>
     <h2>Entries:</h2>
+    {% if tag.visibility.value == "private" %}
+    {% if is_owner %}
+    <p><small><i>This tag is private, only you can see all entries</i></small></p>
+    {% else %}
+    <p><small><i>This tag is private, you can only see your own entries</i></small></p>
+    {% endif %}
+    {% endif %}
     {% if entries %}
     <ul>
       {% for entry in entries %}

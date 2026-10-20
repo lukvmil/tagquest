@@ -101,6 +101,7 @@ def get_tag(
     request: Request, 
     tag_id: str, 
     db: DatabaseSession,
+    user: GetUser,  # None if not logged in, the page is still public
     tag_key: Annotated[str | None, Cookie()] = None
 ):
     tag: Tag | None = db.get(Tag, tag_id)
@@ -109,15 +110,34 @@ def get_tag(
         raise HTTPException(status_code=404, detail="Tag not found")
 
     valid_key: bool = (tag_key == tag.key)
+    is_owner: bool = (user is not None) and (user.id == tag.user_id)
 
-    entries = db.scalars(
-        select(Entry).where(Entry.tag == tag)
-    ).all()
+    if tag.visibility == TagVisibility.PRIVATE:
+        # owner sees all entries on private tag
+        if is_owner:
+            entries = db.scalars(
+                select(Entry).where(Entry.tag == tag)
+            ).all()
+        # all others see only their own entries
+        elif user:
+            entries = db.scalars(
+                select(Entry).where(Entry.tag == tag, Entry.user == user)
+            ).all()
+        else:
+            entries = []
     
+    else:
+        # unlisted/public tags show all to everyone
+        entries = db.scalars(
+            select(Entry).where(Entry.tag == tag)
+        ).all()
+            
+
     return templates.TemplateResponse(
         request=request, name="tag.html", context={
             "tag": tag,
             "entries": entries,
+            "is_owner": is_owner,
             "valid_key": valid_key,
             "entry_error": request.session.pop("entry_error", None)
         }
