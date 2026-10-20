@@ -12,3 +12,4 @@ wheels/
 # other
 *.db
 .env
+uploads/

@@ -110,6 +110,9 @@ async def post_entry(
     user: GetUser,
     text: Annotated[str | None, Form()] = None,
     image: Annotated[UploadFile | None, File()] = None,
+    # strings, since the hidden inputs submit "" until a location is found
+    latitude: Annotated[str | None, Form()] = None,
+    longitude: Annotated[str | None, Form()] = None,
     tag_key: Annotated[str | None, Cookie()] = None,
 ):
     tag: Tag | None = db.get(Tag, tag_id)
@@ -129,13 +132,32 @@ async def post_entry(
     if image is not None and not image.filename:
         image = None
 
-    error = tag.validate_entry(text, has_image=image is not None)
+    lat = None
+    lon = None
+    if latitude and longitude:
+        try:
+            lat = float(latitude)
+            lon = float(longitude)
+        except ValueError:
+            return fail("Invalid location")
+        # also rejects nan
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            return fail("Invalid location")
+
+    error = tag.validate_entry(
+        text,
+        has_image=image is not None,
+        has_location=lat is not None
+    )
     if error:
         return fail(error)
 
     # inputs for modes the tag doesn't use are ignored
     if not tag.txt_mode:
         text = None
+    if not tag.geo_mode:
+        lat = None
+        lon = None
 
     image_name = None
     if tag.img_mode and image:
@@ -156,7 +178,9 @@ async def post_entry(
         tag=tag,
         user=user,
         text=text,
-        image_name=image_name
+        image_name=image_name,
+        latitude=lat,
+        longitude=lon
     )
     db.add(entry)
     db.commit()

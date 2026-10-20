@@ -63,7 +63,12 @@ class Tag(Base):
         self.img_mode = img_mode
         self.geo_mode = geo_mode
 
-    def validate_entry(self, text: str | None, has_image: bool) -> str | None:
+    def validate_entry(
+        self,
+        text: str | None,
+        has_image: bool,
+        has_location: bool
+    ) -> str | None:
         """Returns an error message if an entry doesn't satisfy this tag's modes"""
         if self.status != TagStatus.ACTIVE:
             return "This tag isn't active"
@@ -71,7 +76,8 @@ class Tag(Base):
             return "Text is required"
         if self.img_mode and not has_image:
             return "A photo is required"
-        # TODO: geo_mode
+        if self.geo_mode and not has_location:
+            return "Your location is required"
         return None
 
 class Entry(Base):
@@ -79,6 +85,8 @@ class Entry(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     text: Mapped[str | None]
     image_name: Mapped[str | None]
+    latitude: Mapped[float | None]
+    longitude: Mapped[float | None]
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True))
     
@@ -93,13 +101,17 @@ class Entry(Base):
         tag: Tag,
         user: "User",
         text: str | None = None,
-        image_name: str | None = None
+        image_name: str | None = None,
+        latitude: float | None = None,
+        longitude: float | None = None
     ):
         self.created_at = datetime.now(timezone.utc)
         self.tag = tag
         self.user = user
         self.text = text
         self.image_name = image_name
+        self.latitude = latitude
+        self.longitude = longitude
 
 class User(Base):
     __tablename__ = "user"

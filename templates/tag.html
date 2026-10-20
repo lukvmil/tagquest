@@ -17,8 +17,8 @@
       {% for entry in entries %}
       <li>
         [{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}] <b>{{ entry.user.name }}</b>{% if tag.txt_mode and entry.text %}: {{ entry.text }}{% endif %}
-        {% if tag.geo_mode %}
-        {# TODO: show location once entries store it #}
+        {% if tag.geo_mode and entry.latitude is not none %}
+        <br>{{ "%.5f, %.5f"|format(entry.latitude, entry.longitude) }}</a>
         {% endif %}
         {% if tag.img_mode and entry.image_name %}
         <br><img src="/uploads/{{ entry.image_name }}" alt="Photo from {{ entry.user.name }}" style="max-width: 100%;">
@@ -40,8 +40,40 @@
       <textarea id="text" name="text" rows="6" cols="40"></textarea><br><br>
       {% endif %}
       {% if tag.geo_mode %}
-      <button type="button">Get current location</button>
-      <input type="text" disabled><br><br>
+      <button type="button" onclick="getLocation();">Get current location</button>
+      <span id="loc-display">-</span><br><br>
+      <input type="hidden" id="latitude" name="latitude">
+      <input type="hidden" id="longitude" name="longitude">
+      <script>
+        const locDisplay = document.getElementById("loc-display");
+        const latInput = document.getElementById("latitude");
+        const lonInput = document.getElementById("longitude");
+
+        function getLocation() {
+          locDisplay.innerText = "resolving...";
+          navigator.geolocation.getCurrentPosition(
+            handleLocationSuccess,
+            handleLocationFailure,
+            { enableHighAccuracy: true, timeout: 15000 }
+          );
+        }
+
+        function handleLocationSuccess(loc) {
+          latInput.value = loc.coords.latitude;
+          lonInput.value = loc.coords.longitude;
+          locDisplay.innerText = `${loc.coords.latitude.toFixed(5)}, ${loc.coords.longitude.toFixed(5)}`;
+        }
+
+        function handleLocationFailure(err) {
+          latInput.value = "";
+          lonInput.value = "";
+          if (err.code === err.PERMISSION_DENIED) {
+            locDisplay.innerText = "Location permission denied";
+          } else {
+            locDisplay.innerText = "Failed to get location";
+          }
+        }
+      </script>
       {% endif %}
       {% if tag.img_mode %}
       <label for="image-input">Take photo</label><br>
