@@ -1,4 +1,7 @@
+import mimetypes
+from pathlib import Path
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Cookie, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -11,6 +14,9 @@ from .common import templates, GetUser
 
 
 tag_router = APIRouter()
+
+MAX_IMAGE_BYTES = 20 * 1024 * 1024
+UPLOAD_DIR = Path("uploads")
 
 
 @tag_router.get("/K/{tag_key}", dependencies=[RequireLogin])
@@ -89,27 +95,65 @@ def get_tag(
         request=request, name="tag.html", context={
             "tag": tag,
             "entries": entries,
-            "valid_key": valid_key
+            "valid_key": valid_key,
+            "entry_error": request.session.pop("entry_error", None)
         }
     )
 
 @tag_router.post("/t/{tag_id}/entry")
 async def post_entry(
+    request: Request,
     tag_id: str,
     db: DatabaseSession,
     user: GetUser,
-    text: Annotated[str, Form(...)],
-    image: UploadFile = File()
+    text: Annotated[str | None, Form()] = None,
+    image: Annotated[UploadFile | None, File()] = None,
+    tag_key: Annotated[str | None, Cookie()] = None,
 ):
-    tag: Tag = db.get(Tag, tag_id)
+    tag: Tag | None = db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    def fail(error: str):
+        request.session["entry_error"] = error
+        return RedirectResponse(f"/t/{tag_id}", status_code=303)
+
+    if tag_key != tag.key:
+        return fail("Scan this tag's QR code to add an entry")
+
+    # blank inputs count as missing
+    if text is not None:
+        text = text.strip() or None
+    if image is not None and not image.filename:
+        image = None
+
+    error = tag.validate_entry(text, has_image=image is not None)
+    if error:
+        return fail(error)
+
+    # inputs for modes the tag doesn't use are ignored
+    if not tag.txt_mode:
+        text = None
+
+    image_path = None
+    if tag.img_mode and image:
+        if not (image.content_type or "").startswith("image/"):
+            return fail("Upload must be an image")
+        data = await image.read(MAX_IMAGE_BYTES + 1)
+        if len(data) > MAX_IMAGE_BYTES:
+            return fail("Image is too large (max 10 MB)")
+
+        UPLOAD_DIR.mkdir(exist_ok=True)
+        ext = mimetypes.guess_extension(image.content_type) or ""
+        image_path = UPLOAD_DIR / f"{uuid4().hex}{ext}"
+        image_path.write_bytes(data)
+
     entry = Entry(
         tag=tag,
+        user=user,
         text=text,
-        user=user
+        image_path=str(image_path) if image_path else None
     )
-    data = await image.read()
-    with open(image.filename, "wb") as f:
-        f.write(data)
     db.add(entry)
     db.commit()
     

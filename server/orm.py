@@ -62,11 +62,23 @@ class Tag(Base):
         self.txt_mode = txt_mode
         self.img_mode = img_mode
         self.geo_mode = geo_mode
-        
+
+    def validate_entry(self, text: str | None, has_image: bool) -> str | None:
+        """Returns an error message if an entry doesn't satisfy this tag's modes"""
+        if self.status != TagStatus.ACTIVE:
+            return "This tag isn't active"
+        if self.txt_mode and not text:
+            return "Text is required"
+        if self.img_mode and not has_image:
+            return "A photo is required"
+        # TODO: geo_mode
+        return None
+
 class Entry(Base):
     __tablename__ = "entry"
     id: Mapped[int] = mapped_column(primary_key=True)
-    text: Mapped[str]
+    text: Mapped[str | None]
+    image_path: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True))
     
@@ -76,11 +88,18 @@ class Entry(Base):
     tag_id: Mapped[str] = mapped_column(ForeignKey("tag.id"), index=True)
     tag: Mapped["Tag"] = relationship(back_populates="entries")
     
-    def __init__(self, tag: Tag, text: str, user: "User"):
+    def __init__(
+        self,
+        tag: Tag,
+        user: "User",
+        text: str | None = None,
+        image_path: str | None = None
+    ):
         self.created_at = datetime.now(timezone.utc)
         self.tag = tag
         self.user = user
         self.text = text
+        self.image_path = image_path
 
 class User(Base):
     __tablename__ = "user"
