@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from .auth import RequireLogin
 from .db import DatabaseSession
-from .orm import Entry, Tag
+from .orm import Entry, Tag, TagStatus, TagVisibility
 from .common import templates, GetUser
 
 
@@ -25,7 +25,7 @@ def resolve_key(
     if not tag:
         return HTTPException(status_code=404, detail="Invalid tag key")
     
-    if tag.active:
+    if tag.status == TagStatus.ACTIVE:
         resp = RedirectResponse(f"/t/{tag.id}", status_code=302)
     else:
         resp = RedirectResponse(f"/t/{tag.id}/activate", status_code=302)
@@ -49,7 +49,7 @@ def post_tag_activate(
     user: GetUser,
     tag_id: str, 
     quest: Annotated[str, Form()],
-    visibility: Annotated[str, Form()],
+    visibility: Annotated[TagVisibility, Form()],
     txt_mode: Annotated[bool, Form()] = False,
     img_mode: Annotated[bool, Form()] = False,
     geo_mode: Annotated[bool, Form()] = False,
@@ -60,7 +60,7 @@ def post_tag_activate(
     tag.activate(
         quest=quest,
         user=user,
-        public=(visibility=="public"),
+        visibility=visibility,
         txt_mode=txt_mode,
         img_mode=img_mode,
         geo_mode=geo_mode

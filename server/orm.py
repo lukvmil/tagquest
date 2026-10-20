@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from enum import Enum
 
 from sqlalchemy import DateTime, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -8,15 +9,26 @@ import server.utils as utils
 class Base(DeclarativeBase):
     pass
 
+class TagVisibility(Enum):
+    PUBLIC = "public"
+    UNLISTED = "unlisted"
+    PRIVATE = "private"
+    
+class TagStatus(Enum):
+    INACTIVE = "inactive"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
 class Tag(Base):
     __tablename__ = "tag"
     id: Mapped[str] = mapped_column(
         primary_key=True, default=utils.make_id)
     key: Mapped[str]
-    public: Mapped[bool] = mapped_column(default=False)
-    active: Mapped[bool] = mapped_column(default=False)
-    activated_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True))
+
+    visibility: Mapped[TagVisibility] = mapped_column(default=TagVisibility.PRIVATE)
+    status: Mapped[TagStatus] = mapped_column(default=TagStatus.INACTIVE)
+
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     quest: Mapped[str | None]
     
     txt_mode: Mapped[bool] = mapped_column(default=False)
@@ -36,16 +48,16 @@ class Tag(Base):
     def activate(
         self, quest: str, 
         user: "User", 
-        public: bool,
+        visibility: TagVisibility,
         txt_mode: bool = False,
         img_mode: bool = False,
         geo_mode: bool = False
     ):
-        self.active = True
-        self.public = public
         self.user = user
+        self.status = TagStatus.ACTIVE
         self.activated_at = datetime.now(timezone.utc)
         self.quest = quest
+        self.visibility = visibility
         
         self.txt_mode = txt_mode
         self.img_mode = img_mode

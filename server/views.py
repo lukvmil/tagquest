@@ -3,7 +3,7 @@ from sqlalchemy import or_, and_, select
 
 from .common import GetUser, templates
 from .db import DatabaseSession
-from .orm import Entry, Tag, User
+from .orm import Entry, Tag, TagVisibility, User
 
 
 views_router = APIRouter()
@@ -17,7 +17,7 @@ def get_home(request: Request, db: DatabaseSession, c_user: GetUser):
         ))
     ).all() if c_user else []
     public_tags = db.scalars(
-        select(Tag).where(Tag.public==True)
+        select(Tag).where(Tag.visibility == TagVisibility.PUBLIC)
     ).all()
     
     return templates.TemplateResponse(

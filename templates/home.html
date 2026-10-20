@@ -6,7 +6,7 @@
     <title>tagquest</title>
   </head>
   <body>
-    <h1>Welcome to TagQuest v0.4!</h1>
+    <h1>Welcome to TagQuest v0.5!</h1>
     <p><a href="/leaderboard">Check out the leaderboard!</a><p>
 
     {% if current_user %}
@@ -23,7 +23,7 @@
     {% if your_tags %}
     <ul>
       {% for tag in your_tags %}
-        {% if tag.active %}
+        {% if tag.status == "active" %}
           <li>{{ "*" if tag.user == current_user else "" }}<a href="/t/{{ tag.id }}">{{ tag.quest | truncate(50, end='...')}}</a> [{{ tag.entries|length }} {{"entry" if tag.entries|length == 1 else "entries"}}]</li>
         {% endif %}
       {% endfor %}
@@ -39,7 +39,7 @@
     {% if public_tags %}
     <ul>
       {% for tag in public_tags %}
-        {% if tag.active %}
+        {% if tag.status == "active" %}
           <li><a href="/t/{{ tag.id }}">{{ tag.quest | truncate(50, end='...')}}</a> ({{ tag.entries|length }} {{"entry" if tag.entries|length == 1 else "entries"}})</li>
         {% endif %}
       {% endfor %}
