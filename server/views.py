@@ -11,15 +11,18 @@ views_router = APIRouter()
 @views_router.get("/")
 def get_home(request: Request, db: DatabaseSession, c_user: GetUser):
     your_tags = db.scalars(
-        select(Tag).where(or_(
-            Tag.user == c_user,
-            Tag.entries.any(Entry.user == c_user),
-        ))
+        select(Tag).where(
+            or_(
+                Tag.user == c_user,
+                Tag.entries.any(Entry.user == c_user),
+            ),
+            Tag.status != TagStatus.INACTIVE
+        )
     ).all() if c_user else []
     public_tags = db.scalars(
         select(Tag).where(
             Tag.visibility == TagVisibility.PUBLIC,
-            Tag.status == TagStatus.ACTIVE
+            Tag.status != TagStatus.INACTIVE
         )
     ).all()
     
