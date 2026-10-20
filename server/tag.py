@@ -31,7 +31,7 @@ def resolve_key(
     ).first()
     
     if not tag:
-        return HTTPException(status_code=404, detail="Invalid tag key")
+        raise HTTPException(status_code=404, detail="Invalid tag key")
     
     if tag.status == TagStatus.ACTIVE:
         resp = RedirectResponse(f"/t/{tag.id}", status_code=302)
@@ -47,11 +47,23 @@ def resolve_key(
     return resp
 
 
-@tag_router.get("/t/{tag_id}/activate")
-def get_tag_activate():
+@tag_router.get("/t/{tag_id}/activate", dependencies=[RequireLogin])
+def get_tag_activate(
+    tag_id: str,
+    db: DatabaseSession,
+    tag_key: Annotated[str | None, Cookie()] = None,
+):
+    tag: Tag | None = db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    if tag.status != TagStatus.INACTIVE:
+        return RedirectResponse(f"/t/{tag_id}", status_code=302)
+    if tag_key != tag.key:
+        raise HTTPException(status_code=403, detail="Scan this tag's QR code to activate it")
+
     return FileResponse("static/activate_tag.html")
 
-@tag_router.post("/t/{tag_id}/activate")
+@tag_router.post("/t/{tag_id}/activate", dependencies=[RequireLogin])
 def post_tag_activate(
     db: DatabaseSession,
     user: GetUser,
@@ -63,8 +75,14 @@ def post_tag_activate(
     geo_mode: Annotated[bool, Form()] = False,
     tag_key: Annotated[str | None, Cookie()] = None,
 ):
-    print("got key:", tag_key)
-    tag: Tag = db.get(Tag, tag_id)
+    tag: Tag | None = db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    if tag_key != tag.key:
+        raise HTTPException(status_code=403, detail="Scan this tag's QR code to activate it")
+    if tag.status != TagStatus.INACTIVE:
+        raise HTTPException(status_code=409, detail="This tag has already been activated")
+
     tag.activate(
         quest=quest,
         user=user,
@@ -85,10 +103,13 @@ def get_tag(
     db: DatabaseSession,
     tag_key: Annotated[str | None, Cookie()] = None
 ):
-    tag: Tag = db.get(Tag, tag_id)
+    tag: Tag | None = db.get(Tag, tag_id)
+    # inactive tags only exist to someone scanning the QR code, via /K/{tag_key}
+    if not tag or tag.status == TagStatus.INACTIVE:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
     valid_key: bool = (tag_key == tag.key)
-    print(f"got tag key: {tag_key}, valid: {valid_key}, expected: {tag.key}")
-    
+
     entries = db.scalars(
         select(Entry).where(Entry.tag == tag)
     ).all()
@@ -102,7 +123,7 @@ def get_tag(
         }
     )
 
-@tag_router.post("/t/{tag_id}/entry")
+@tag_router.post("/t/{tag_id}/entry", dependencies=[RequireLogin])
 async def post_entry(
     request: Request,
     tag_id: str,
