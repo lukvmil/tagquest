@@ -12,12 +12,10 @@
       You are the first user to scan this tag, so you get to activate it!
     </p>
     <p>
-      If you are stuck, here are some example quests you can use or modify:
+      If you are stuck, here are some example quests you can use or modify:<br>
+      <small><i>Click on an example to fill in the tag quest and entry modes</i></small>
     </p>
-    <ul>
-      <li><a href="#" onclick="setQuest(0);">Collaborative storytelling</a></li>
-      <li><a href="#" onclick="setQuest(1);">Hide and seek</a></li>
-    </ul>
+    <ul id="example-quests"></ul>
     <form method="post">
       <label for="quest"><b>Tag quest:</b></label><br>
       <small><i>A tag's quest is the mission/goal/instructions that other users will see when adding new entries</i></small><br>
@@ -27,8 +25,10 @@
       <small><i>These are the inputs modes users will provide when adding an entry to this tag</i></small><br>
       <input type="checkbox" id="text-mode", name="txt_mode">
       <label for="text-mode">Text mode</label><br>
+      <!-- geolocation disabled for now
       <input type="checkbox" id="geo-mode", name="geo_mode">
       <label for="geo-mode">Geolocation mode</label><br>
+      -->
       <input type="checkbox" id="image-mode", name="img_mode">
       <label for="image-mode">Image mode</label><br><br>
 
@@ -46,14 +46,51 @@
   </body>
   <script>
     const questText = document.getElementById("quest");
+    const txtModeBox = document.getElementById("text-mode");
+    const imgModeBox = document.getElementById("image-mode");
+    const geoModeBox = document.getElementById("geo-mode");
 
     const exampleQuests = [
-      "Write a sentence or two of a story, then hand this tag to someone else to continue it",
-      "Hide this tag somewhere in the hub, then add entry giving a hint about its location. If you find this tag, hide it again in a new location! (Or attach this tag to an object and hide that :))"
+      {
+        title: "Collaborative storytelling",
+        quest: "Write a sentence or two of a story, then hand this tag to someone else to continue it",
+        txt_mode: true
+      },
+      {
+        title: "Hide and seek",
+        quest: "Hide this tag somewhere in the hub, then add entry giving a hint about its location. If you find this tag, hide it again in a new location! (Or attach this tag to an object and hide that :))",
+        txt_mode: true
+      },
+      {
+        title: "Simple event check in",
+        quest: "Submitting to this tag will record your name and timestamp, recording your check in for this event"
+      }
     ]
 
-    function setQuest(index) {
-      questText.innerText = exampleQuests[index];
+    const exampleList = document.getElementById("example-quests");
+    for (const example of exampleQuests) {
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = example.title;
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        setQuest(example);
+      });
+
+      const item = document.createElement("li");
+      item.appendChild(link);
+      exampleList.appendChild(item);
+    }
+
+    // modes are opt in, missing ones default to false
+    function setQuest(example) {
+      questText.value = example.quest;
+      txtModeBox.checked = example.txt_mode ?? false;
+      imgModeBox.checked = example.img_mode ?? false;
+      // checkbox is commented out while geolocation is disabled
+      if (geoModeBox) {
+        geoModeBox.checked = example.geo_mode ?? false;
+      }
     }
   </script>
 </html>

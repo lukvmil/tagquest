@@ -17,9 +17,11 @@
       {% for entry in entries %}
       <li>
         [{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}] <b>{{ entry.user.name }}</b>{% if tag.txt_mode and entry.text %}: {{ entry.text }}{% endif %}
+        {# geolocation disabled for now
         {% if tag.geo_mode and entry.latitude is not none %}
         <br>{{ "%.5f, %.5f"|format(entry.latitude, entry.longitude) }}</a>
         {% endif %}
+        #}
         {% if tag.img_mode and entry.image_name %}
         <br><img src="/uploads/{{ entry.image_name }}" alt="Photo from {{ entry.user.name }}" style="max-width: 100%;">
         {% endif %}
@@ -39,6 +41,7 @@
       <label for="text">Add an entry to this tag:</label><br>
       <textarea id="text" name="text" rows="6" cols="40"></textarea><br><br>
       {% endif %}
+      {# geolocation disabled for now
       {% if tag.geo_mode %}
       <button type="button" onclick="getLocation();">Get current location</button>
       <span id="loc-display">-</span><br><br>
@@ -75,6 +78,7 @@
         }
       </script>
       {% endif %}
+      #}
       {% if tag.img_mode %}
       <label for="image-input">Take photo</label><br>
       <input type="file" id="image-input" name="image" accept="image/*" capture="environment">
