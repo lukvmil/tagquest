@@ -40,9 +40,6 @@ def get_home(request: Request, db: DatabaseSession, c_user: GetUser):
 
 @views_router.get("/leaderboard")
 def get_leaderboard(request: Request, db: DatabaseSession, c_user: GetUser):
-    print("tags:", len(c_user.tags))
-    print("entries:", len(c_user.entries))
-    
     users = db.scalars(select(User)).all()
     leaderboard_data = []
     for u in users:
