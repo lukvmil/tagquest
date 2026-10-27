@@ -9,5 +9,6 @@ class Settings(BaseSettings):
     rc_client_id: str
     rc_client_secret: SecretStr
     host: str = "localhost:8000"
+    print_mode: str = "remote"
     
 settings = Settings()

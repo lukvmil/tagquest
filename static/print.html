@@ -6,14 +6,6 @@
     <title>tagquest</title>
   </head>
   <body>
-    <a href="/">&#8592; back home</a>
-    <h1>Tag Printer Instructions</h1>
-    <ul>
-      <li>Tags will print from the receipt printer on the fourth floor of the hub, next to the big pillar by the kitchen</li>
-      <li>Please only print a tag if you are in the hub and can pick it up a timely manner :)</li>
-      <li>After you print your tag, scan it with your phone to activate it!</li>  
-    </ul>
-    <button onclick="printTag()">Print my tag!</button>
   </body>
   <script>
     function getCookie(name) {
@@ -22,65 +14,35 @@
       if (parts.length === 2) return parts.pop().split(';').shift();
     }
 
-    const printerUrl = "https://receipt.recurse.com"; 
+    const receiptUrl = "/receipt";
+    const printerEscposUrl = "https://receipt.recurse.com/escpos";
+    // falls back to home if the receipt never loads
+    let redirectUrl = "/";
 
-    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    async function printTag() {
+      const escposResp = await fetch(receiptUrl);
+      if (!escposResp.ok) {
+        throw new Error(`fetching receipt failed: HTTP ${escposResp.status} ${await escposResp.text()}`);
+      }
+      redirectUrl = `/t/${escposResp.headers.get("X-Tag-Id")}`;
+      const escposBytes = await escposResp.arrayBuffer();
 
-    async function printerPost(path, contentType, body) {
-      const res = await fetch(`${printerUrl}${path}`, {
+      const printResp = await fetch(printerEscposUrl, {
         method: "POST",
         credentials: "include",
         headers: {
-          "Content-Type": contentType,
+          "Content-Type": "application/octet-stream",
           "X-CSRF-Token": getCookie("receipt_csrf"),
         },
-        body,
+        body: escposBytes,
       });
-      if (!res.ok) {
-        throw new Error(`${path} failed: HTTP ${res.status} ${await res.text()}`);
+      if (!printResp.ok) {
+        throw new Error(`printing failed: HTTP ${printResp.status} ${await printResp.text()}`);
       }
-      return res;
-    }
-    async function printTag() {
-      const tag_resp = await fetch("/new-tag");
-      const tag_dat = await tag_resp.json();
-
-      const qr_src = await fetch(`/k/${tag_dat.key}/qrcode`);
-
-      const user_resp = await fetch(`/me`);
-      const user_data = await user_resp.json();
-
-      const blob = await qr_src.blob();
-      await printerPost(
-        "/text",
-        "application/json",
-        JSON.stringify({ 
-          text: `TagQuest v0.5`, 
-          scaleHeight: 2,
-          scaleWidth: 2,
-          coda: "newline" 
-        })
-      );
-      await delay(200);
-      await printerPost(
-        "/text",
-        "application/json",
-        JSON.stringify({ 
-          text: `\nTag #${tag_dat.id} printed by ${user_data.name}`, 
-          coda: "newline" 
-        })
-      );
-      await printerPost("/image?cut=0", blob.type || "application/octet-stream", blob);
-      await delay(200);
-      await printerPost(
-        "/text",
-        "application/json",
-        JSON.stringify({ 
-          text: `Tag quest:\n\n____________________________________\n\n____________________________________`, 
-          coda: "cut" })
-      );
     }
 
+    printTag()
+      .catch((err) => console.error(err))
+      .finally(() => window.location.replace(redirectUrl));
   </script>
 </html>
-

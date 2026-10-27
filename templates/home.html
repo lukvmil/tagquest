@@ -6,12 +6,12 @@
     <title>tagquest</title>
   </head>
   <body>
-    <h1>Welcome to TagQuest v0.5!</h1>
+    <h1>Welcome to TagQuest v0.6!</h1>
     <p><a href="/leaderboard">Check out the leaderboard!</a><p>
 
     {% if current_user %}
     <p>You are logged in as <b>{{ current_user.name }}</b></p>
-    <button onclick="window.location.href = '/print'">Print a new tag</button>
+    <button onclick="window.location.href = '/create-tag'">Print a new tag</button>
     <button onclick="window.location.href = '/logout'">Log out</button>
     {% else %}
     <button onclick="window.location.href = '/login'">Log in</button>

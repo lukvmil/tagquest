@@ -2,9 +2,10 @@ from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Cookie, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Cookie, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+import httpx
 from sqlalchemy import select
 
 from .auth import RequireLogin
@@ -12,6 +13,7 @@ from .db import DatabaseSession
 from .images import InvalidImage, process_image
 from .orm import Entry, Tag, TagStatus, TagVisibility
 from .common import templates, GetUser
+from .config import settings
 
 
 tag_router = APIRouter()
@@ -33,10 +35,7 @@ def resolve_key(
     if not tag:
         raise HTTPException(status_code=404, detail="Invalid tag key")
     
-    if tag.status == TagStatus.ACTIVE:
-        resp = RedirectResponse(f"/t/{tag.id}", status_code=302)
-    else:
-        resp = RedirectResponse(f"/t/{tag.id}/activate", status_code=302)
+    resp = RedirectResponse(f"/t/{tag.id}", status_code=302)
     
     resp.set_cookie(
         key="tag_key", 
@@ -47,42 +46,22 @@ def resolve_key(
     return resp
 
 
-@tag_router.get("/t/{tag_id}/activate", dependencies=[RequireLogin])
-def get_tag_activate(
-    tag_id: str,
-    db: DatabaseSession,
-    tag_key: Annotated[str | None, Cookie()] = None,
-):
-    tag: Tag | None = db.get(Tag, tag_id)
-    if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
-    if tag.status != TagStatus.INACTIVE:
-        return RedirectResponse(f"/t/{tag_id}", status_code=302)
-    if tag_key != tag.key:
-        raise HTTPException(status_code=403, detail="Scan this tag's QR code to activate it")
+@tag_router.get("/create-tag", dependencies=[RequireLogin])
+def get_create_tag():
+    return FileResponse("static/create_tag.html")
 
-    return FileResponse("static/activate_tag.html")
-
-@tag_router.post("/t/{tag_id}/activate", dependencies=[RequireLogin])
-def post_tag_activate(
+@tag_router.post("/create-tag", dependencies=[RequireLogin])
+def post_create_tag(
+    request: Request,
     db: DatabaseSession,
     user: GetUser,
-    tag_id: str, 
     quest: Annotated[str, Form()],
     visibility: Annotated[TagVisibility, Form()],
     txt_mode: Annotated[bool, Form()] = False,
     img_mode: Annotated[bool, Form()] = False,
     geo_mode: Annotated[bool, Form()] = False,
-    tag_key: Annotated[str | None, Cookie()] = None,
 ):
-    tag: Tag | None = db.get(Tag, tag_id)
-    if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
-    if tag_key != tag.key:
-        raise HTTPException(status_code=403, detail="Scan this tag's QR code to activate it")
-    if tag.status != TagStatus.INACTIVE:
-        raise HTTPException(status_code=409, detail="This tag has already been activated")
-
+    tag = Tag()
     tag.activate(
         quest=quest,
         user=user,
@@ -91,9 +70,26 @@ def post_tag_activate(
         img_mode=img_mode,
         geo_mode=geo_mode
     )
+    db.add(tag)
     db.commit()
     
-    return RedirectResponse(f"/t/{tag_id}", status_code=303)
+    
+    if settings.print_mode == "local":
+        httpx.post(
+            url="http://127.0.0.1:5000/print",
+            params=dict(
+                from_url=f"https://{settings.host}/receipt?tag_key={tag.key}"
+            )
+        )
+        return RedirectResponse(f"/t/{tag.id}", status_code=303)
+    elif settings.print_mode == "remote":
+        # /receipt pops this, so the tag can only be printed once
+        request.session["print_tag_key"] = tag.key
+        return RedirectResponse("/print", status_code=303)
+
+    return RedirectResponse(f"/t/{tag.id}", status_code=303)
+
+
 
 
 @tag_router.get("/t/{tag_id}", response_class=HTMLResponse)
