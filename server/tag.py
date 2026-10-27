@@ -76,10 +76,8 @@ def post_create_tag(
     
     if settings.print_mode == "local":
         httpx.post(
-            url="http://127.0.0.1:5000/print",
-            params=dict(
-                from_url=f"https://{settings.host}/receipt?tag_key={tag.key}"
-            )
+            url=settings.local_print_url,
+            params=dict(from_url=f"https://{settings.host}/receipt?tag_key={tag.key}")
         )
         return RedirectResponse(f"/t/{tag.id}", status_code=303)
     elif settings.print_mode == "remote":
